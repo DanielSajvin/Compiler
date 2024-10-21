@@ -1,0 +1,6 @@
+entero a = 5;
+entero b = 3;
+a = b + 2;
+si (a > b) {
+    b = a;
+}

@@ -1,0 +1,14 @@
+cadena despedida = "Adios";
+cadena alago = "Hermoso";
+entero numeros = 4;
+
+alago = "Hermosa";
+numeros = despedida + 3;
+
+func FUNCION (cadena saludo)
+    saludo = "Hola";
+    print(saludo);
+    
+
+
+    end func(FUNCTION);

@@ -1,0 +1,11 @@
+entero numero = 1;
+
+# MIENTRAS
+mientras (numero > 0){
+    numero = numero - 1;
+}
+
+# HACER MIENTRAS
+hacer{
+    numero = numero - 1;
+} mientras (numero > 0);
