@@ -1,0 +1,9 @@
+cadena despedida = "Adios";
+cadena alago = "Hermoso";
+
+alago = "Hermosa";
+
+func FUNCION (cadena saludo, entero numero)
+    saludo = "Hola";
+
+    end func(FUNCTION);

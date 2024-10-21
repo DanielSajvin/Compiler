@@ -1,0 +1,42 @@
+entero int = 10;
+
+decimal double = 314.15;
+
+booleano bool = True;
+booleano bool = False;
+
+cadena string = "hola123";
+cadena string1 = "123hola";
+cadena string2 = "HOLA MUNDO!";
+
+# esto es un sino mal declarado
+sino {
+    int = 1;
+}
+
+si (int == 10){
+    int += 1;
+
+} sino si (int == 0){
+    int = 10;
+
+} sino {
+    int = 0;
+}
+
+si (string=="hola123")
+{
+    string = "adios321";
+
+    si (string == "adios321"){
+        string = "hola123";
+    }
+}
+
+hacer{
+    int += 1;
+} mientras (int < 100);
+
+mientras (int < 100){
+    string += "1";
+}

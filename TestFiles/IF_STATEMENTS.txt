@@ -1,0 +1,33 @@
+entero int = 10;
+
+# SI, SINO SI, SINO SI, SINO
+si (int == 10){
+    int = 1;
+} sino si (int == 1) {
+    int = 0;
+} sino si (int == 0){
+    int = 3;
+} sino {
+    int = 10;
+}
+
+# SI, SINO SI, SINO
+si (int == 10){
+    int = 1;
+} sino si (int == 1) {
+    int = 0;
+} sino {
+    int = 10;
+}
+
+# SI, SINO
+si (int == 10){
+    int = 0;
+} sino {
+    int = 10;
+}
+
+# SI
+si (int == 0){
+    int = 10;
+}
