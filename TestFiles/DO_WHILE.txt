@@ -8,4 +8,5 @@ mientras (numero > 0){
 # HACER MIENTRAS
 hacer{
     numero = numero - 1;
+    print(numero);
 } mientras (numero > 0);

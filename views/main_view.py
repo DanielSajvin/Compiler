@@ -92,3 +92,4 @@ class MainView(QMainWindow):
 
         # Finalmente, mostramos el código intermedio en el QTextEdit llamado label_inter
         self.label_inter.setText(intermediate_code)
+        
