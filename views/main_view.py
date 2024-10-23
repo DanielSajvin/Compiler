@@ -78,17 +78,26 @@ class MainView(QMainWindow):
 
     # Compilar archivo
     def compile(self, file):
-        compiled = Compiler(file)
-        data = compiled.parse()
-        data2 = f"Total de Operadores: {compiled.countOperatorPrint} \n " \
-                f"Total de Palabras Reservadas: {compiled.countReserverdWordPrint} \n " \
-                f"Total de Identificadores: {compiled.countIdentifierPrint} \n " \
-                f"Total de Signos: {compiled.countSignPrint} "
-        self.update_fileComponentes_text_edit(data2)
-        self.update_fileValues_text_edit(data)
+        try:
+            compiled = Compiler(file)
+            data = compiled.parse()
+            data2 = f"Total de Operadores: {compiled.countOperatorPrint} \n " \
+                    f"Total de Palabras Reservadas: {compiled.countReserverdWordPrint} \n " \
+                    f"Total de Identificadores: {compiled.countIdentifierPrint} \n " \
+                    f"Total de Signos: {compiled.countSignPrint} "
+            self.update_fileComponentes_text_edit(data2)
+            self.update_fileValues_text_edit(data)
 
-        program_lines = data.split("\n")  # Dividimos el código en líneas para procesarlo
-        intermediate_code = compiled.generate_intermediate_code(program_lines)  # Llamamos al nuevo método
+            # Mostrar errores léxicos, sintácticos y semánticos
+            errors = "\n".join(compiled.lexical_errors + compiled.syntax_errors + compiled.semantic_errors)
+            self.txt_errores.setText(errors)  # Mostrar los errores en el QTextEdit 'txt_errores'
 
-        # Finalmente, mostramos el código intermedio en el QTextEdit llamado label_inter
-        self.label_inter.setText(intermediate_code)
+            # Generar código intermedio (por separado del análisis)
+            with open(file, 'r') as f:
+                file_content = f.read()  # Leer el contenido del archivo de nuevo para el código intermedio
+                intermediate_code = compiled.generate_intermediate_code(file_content)  # Generar código intermedio
+
+            # Finalmente, mostramos el código intermedio en el QTextEdit llamado label_inter
+            self.label_inter.setText(intermediate_code)
+        except Exception as e:
+            print(f"Error: {e}")  # Mostrar el error en la consola para diagnosticar

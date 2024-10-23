@@ -12,20 +12,28 @@ class Compiler:
         self.countOperatorPrint = 0
         self.countSignPrint = 0
         self.intermediate_code = []  # Para almacenar el código intermedio
+        self.label_count = 0  # Contador para generar etiquetas únicas
 
-        # Declaramos un diccionario "reservedWord" para saber todos los tkns
-        self.reservedWord = {'entero': 'Palabra reservada',
-                             'decimal': 'Palabra reservada',
-                             'booleano': 'Palabra reservada',
-                             'cadena': 'Palabra reservada',
-                             'si': 'Palabra reservada',
-                             'sino': 'Palabra reservada',
-                             'sino si': 'Palabra reservada',
-                             'mientras': 'Palabra reservada',
-                             'hacer': 'Palabra reservada',
-                             'para': 'Palabra reservada',
-                             'func': 'Palabra reservada',
-                             'print': 'Palabra reservada',}
+        # Errores
+        self.lexical_errors = []
+        self.syntax_errors = []
+        self.semantic_errors = []
+
+        # Diccionario de palabras reservadas
+        self.reservedWord = {
+            'entero': 'Palabra reservada',
+            'decimal': 'Palabra reservada',
+            'booleano': 'Palabra reservada',
+            'cadena': 'Palabra reservada',
+            'si': 'Palabra reservada',
+            'sino': 'Palabra reservada',
+            'sino si': 'Palabra reservada',
+            'mientras': 'Palabra reservada',
+            'hacer': 'Palabra reservada',
+            'para': 'Palabra reservada',
+            'func': 'Palabra reservada',
+            'print': 'Palabra reservada',
+        }
         self.reservedWord_key = self.reservedWord.keys()
 
         self.declared_variables = {}
@@ -33,6 +41,11 @@ class Compiler:
 
         self.function_declared_variables = {}
         self.function_declared_variables_keys = self.function_declared_variables.keys()
+
+    # Función para generar etiquetas únicas
+    def new_label(self):
+        self.label_count += 1
+        return f"L{self.label_count}"
 
     # Analisis del archivo completo y sus cadenas
     def parse(self):
@@ -52,11 +65,8 @@ class Compiler:
                 return len(match)
 
         def check_identifier_in_token(token):
-            pattern = r'\b(?!entero|decimal|booleano|cadena|si|sino|mientras|hacer|verdadero|falso|[0-9])\w+(?!\w*;)(' \
+            pattern = r'\b(?!entero|decimal|booleano|cadena|si|sino|mientras|hacer|verdadero|falso|print|[0-9])\w+(?!\w*;)(' \
                       r'?=(?:[^"]|"[^"]*")*$)\b'
-            # \b(?!entero|decimal|booleano|cadena|si|sino|mientras|hacer|verdadero|falso)[^\W\d]+\b(?=(?:(?:[^"]*"){
-            # 2})*[^"]*$) casi funciona \b(?!entero|decimal|booleano|cadena|si|sino|mientras|hacer|verdadero|falso
-            # |"|[0-9])\w+\b casi funciona x2 pero reconoce tambien los valores que se le da a la variable
             match = re.findall(pattern, token)
 
             if match:
@@ -88,17 +98,19 @@ class Compiler:
                         message = f"Tipo de variable: {type}\nNombre de variable: {name}\nValor de la variable: {value}"
 
                         eval(value)
-                        # check_declaration_value(declaration)
 
                         return message
                     except:
-                        return f"{declaration}\nEl valor de la variable no esta en el formato correcto"
+                        self.semantic_errors.append(f"Error semántico en {declaration}: valor no válido")
+                        return f"{declaration}\nEl valor de la variable no está en el formato correcto"
                 else:
+                    self.semantic_errors.append(f"Error semántico en {declaration}: tipo no válido")
                     return f"{declaration}\nEl tipo de variable no es correcto"
             else:
                 is_modification = check_variable_modification(declaration)
                 if not (is_modification[1]):
-                    return f"{declaration}\nLa declaracion de la variable no es correcta"
+                    self.syntax_errors.append(f"Error sintáctico en {declaration}")
+                    return f"{declaration}\nLa declaración de la variable no es correcta"
 
                 else:
                     return is_modification[0]
@@ -109,46 +121,17 @@ class Compiler:
             match = re.match(pattern, modification)
 
             if not (match):
-                return f"{modification} esta mal declarado"
+                return f"{modification} está mal declarado", False
 
             else:
                 var_name = match.group(1)
 
                 if var_name not in self.declared_variables_keys \
                         and var_name not in self.function_declared_variables_keys:
+                    self.semantic_errors.append(f"Error semántico: {var_name} no está declarado")
                     return f"{var_name} no existe", False
 
-                else:
-                    # value = match.group(3)
-                    # prev_value = self.declared_variables[var_name]
-                    # mod_value = match.group(3)
-                    #
-                    # operation = match.group(2)
-                    # if operation == "=":
-                    #     new_value = mod_value
-                    #
-                    # elif operation == "+=":
-                    #     if isinstance(prev_value, numbers.Number):
-                    #         print('int')
-                    #         new_value = prev_value + mod_value
-                    #
-                    #     elif isinstance(prev_value, float):
-                    #         print('float')
-                    #         new_value = float(prev_value) + float(mod_value)
-                    #
-                    #     elif isinstance(prev_value, str):
-                    #         print('string')
-                    #         prev_value = prev_value.replace('"', '')
-                    #         mod_value = mod_value.replace('"', '')
-                    #
-                    #         new_value = prev_value + mod_value
-                    #
-                    # elif operation == "-=":
-                    #     new_value = prev_value - mod_value
-                    #
-                    # self.declared_variables[var_name] = new_value
-
-                    return f"Modificacion de variable\nNombre de variable: {var_name}\n", True
+                return f"Modificación de variable\nNombre de variable: {var_name}\n", True
 
         def check_condition_statement(statement):
             pattern = r"\(\s*(.[^()]+)\s*(==|!=|>=|<=|>|<|is|is not)\s*(.[^()]+)\)"
@@ -156,37 +139,16 @@ class Compiler:
             match = re.match(pattern, statement)
 
             if not (match):
+                self.syntax_errors.append(f"Error sintáctico en {statement}")
                 return f"{statement} mal declarado"
 
-            else:
-                return f"{statement} bien declarado"
+            return f"{statement} bien declarado"
 
         def check_if_statement(statement):
             pattern = r"\s*((si)\s*(\(.[^()]+\))\s*(\{.[^{}]+\}))\s*((sino si)\s*(\(.[^()]+\))\s*(\{.[^{}]+\}))?\s*((" \
                       r"sino si)\s*(\(.[^()]+\))\s*(\{.[^{}]+\}))?\s*((sino si)\s*(\(.[^()]+\))\s*(\{.[^{}]+\}))?\s*(" \
                       r"(sino si)\s*(\(.[^()]+\))\s*(\{.[^{}]+\}))?\s*((sino si)\s*(\(.[^()]+\))\s*(\{.[^{" \
                       r"}]+\}))?\s*((sino si)\s*(\(.[^()]+\))\s*(\{.[^{}]+\}))?\s*((sino)\s*(\{.[^{}]+\}))?"
-
-            """
-            grupo 0: EXPRESION COMPLETA
-            grupo 1: si (CONDICION) {ACCION SI VERDADERO}
-            grupo 2: si
-            grupo 3: (CONDICION)
-            grupo 4: {ACCION SI VERDADERO}
-            grupo 5: sino si (CONDICION) {ACCION SI VERDADERO}
-            grupo 6: sino si
-            grupo 7: (CONDICION)
-            grupo 8: {ACCION SI VERDADERO}
-            grupo 29: sino {ACCION}
-            grupo 30: sino
-            grupo 31: {ACCION}
-
-            ESTA SUJETO A BUGS EN CASO DE VARIOS "sino si" DEBIDO A LA FORMA EN LA QUE OPERA
-            LA EXPRESION REGULAR AL MOMENTO DE EVALUAR
-            
-            (SE INTENTO SOLUCIONAR INSERTANDO VARIOS SINO SI EN LA EXPRESION REGULAR, MAS NO ES UNA SOLUCION
-            ABSOLUTA)
-            """
 
             match = re.match(pattern, statement)
             if match:
@@ -215,7 +177,8 @@ class Compiler:
 
                 return message
             else:
-                return "La condicion esta mal declarada."
+                self.syntax_errors.append(f"Error sintáctico en {statement}")
+                return "La condición está mal declarada."
 
         def is_token_sign(token):
             pattern = r"[\(\)\{\}\"\;]"
@@ -223,31 +186,29 @@ class Compiler:
 
             if match:
                 return True
-            else:
-                return False
+            return False
 
         def check_doWhile_statement(statement):
             pattern = r"(hacer)\s*(\{[\s\S]*?\})\s*(mientras)\s*(\(.[^()]+\))\s*;"
 
             match = re.match(pattern, statement)
             if match:
-                message = f"Palabra reservada: hacer, mientras\nCondicion: {match.group(4)}\nAcciones: {match.group(2)}"
-
+                message = f"Palabra reservada: hacer, mientras\nCondición: {match.group(4)}\nAcciones: {match.group(2)}"
             else:
-                message =  "La condicion -hacer/mientras- esta mal declarada"
+                self.syntax_errors.append(f"Error sintáctico en {statement}")
+                message = "La condición -hacer/mientras- está mal declarada"
 
             return message
 
         def check_while_statement(statement):
             pattern = r"(mientras)\s*(\([^;]+\))\s*(\{[\s\S]*?\})"
 
-
-            match = re.match(pattern, statement)
+            match = re.match(pattern)
             if match:
                 message = f"Palabra reservada: mientras\nCondiciones: {check_condition_statement(match.group(2))}\nAcciones: {match.group(3)}"
-
             else:
-                message = "La condicion -mientras- esta mal declarada"
+                self.syntax_errors.append(f"Error sintáctico en {statement}")
+                message = "La condición -mientras- está mal declarada"
             return message
 
         def check_atribute_statement(statement):
@@ -262,54 +223,64 @@ class Compiler:
                 if value == '':
                     self.function_declared_variables[name] = value
                     message = f"'{statement}' bien declarado\t"
-
                 else:
                     try:
                         eval(value)
                         self.function_declared_variables[name] = value
                         message = f"{statement} bien declarado"
-
                     except:
-                        message = 'ATRIBUTO MAL DECLARADO'
-
+                        self.semantic_errors.append(f"Error semántico en {statement}: valor no válido")
+                        message = 'Atributo mal declarado'
             else:
+                self.syntax_errors.append(f"Error sintáctico en {statement}")
                 message = f"{statement} mal declarado"
 
             return message
 
-
         def check_function_statement(statement):
             pattern = r"\s*(func)\s*([a-zA-Z0-9_]+)\s*\(([^()]*)\)\s*([^{}]+)\s*(end func\([^()]+\);)"
 
-            match = re.match(pattern, statement)
+            match = re.match(pattern)
             if match:
-                message = f"Palabra reservada: func: {check_condition_statement(match.group(1))}\nNombre de la funcion: {match.group(2)}\n"
+                message = f"Palabra reservada: func: {check_condition_statement(match.group(1))}\nNombre de la función: {match.group(2)}\n"
                 atributes = match.group(3)
                 if atributes is not None:
                     self.function_declared_variables.clear()
 
                     atribute_list = atributes.split(',')
 
-                    message += 'Atributes: '
+                    message += 'Atributos: '
 
                     for a in atribute_list:
                         message += check_atribute_statement(a)
 
                     message += f"\nAcciones: {match.group(4)}"
             else:
-                message = "La funcion esta mal declarada"
+                self.syntax_errors.append(f"Error sintáctico en {statement}")
+                message = "La función está mal declarada"
             return message
 
         file = open(self.file)
-
-        # Extraer el contenido del archivo
         content = file.read()
-
         program = content.split("\n")
-
-        # Declaracion de variables
         message = ""  # Mensaje final
 
+        for i, line in enumerate(program):
+            tokens = line.split()
+            for token in tokens:
+                if token in self.reservedWord_key:
+                    self.countReserverdWordPrint += 1
+                elif check_operator_in_token(token):
+                    self.countOperatorPrint += check_operator_in_token(token)
+                elif check_sign_in_token(token):
+                    self.countSignPrint += check_sign_in_token(token)
+                elif check_identifier_in_token(token):
+                    self.countIdentifierPrint += check_identifier_in_token(token)
+                elif re.match("^[0-9]+$", token):  # Números enteros
+                    continue
+                else:
+                    # Si el token no coincide con ningún conjunto conocido, es un error léxico
+                    self.lexical_errors.append(f"Error léxico en token: '{token}' en la línea {i + 1}")
         for i, token in enumerate(program):
             if token != '':
                 if check_operator_in_token(token):
@@ -383,44 +354,75 @@ class Compiler:
 
     # Metodo para obtener el codigo intermedio
     def generate_intermediate_code(self, program):
-        temp_count = 0
+        # Reiniciar el código intermedio
+        self.intermediate_code = []
 
-        def new_temp():
-            nonlocal temp_count
-            temp_name = f"T{temp_count}"
-            temp_count += 1
-            return temp_name
+        # Inicializar etiquetas para el flujo de control
+        label_true = None
+        label_false = None
+        label_end = None
 
-        for line in program:
-            if "=" in line:
-                parts = line.split("=")
-                left = parts[0].strip()
-                right = parts[1].strip().replace(";", "")
+        # Dividir el programa en líneas
+        program_lines = program.split("\n")
 
-                if "+" in right or "-" in right or "*" in right or "/":
-                    # Generar código intermedio para operaciones aritméticas
-                    operands = re.split(r'(\+|\-|\*|\/)', right)
+        inside_if_block = False
+        inside_else_block = False
 
-                    # Verificar que tenemos exactamente 3 elementos (operando1, operador, operando2)
-                    if len(operands) == 3:
-                        temp_var = new_temp()
-                        self.intermediate_code.append(f"{temp_var} = {operands[0].strip()} {operands[1]} {operands[2].strip()}")
-                        self.intermediate_code.append(f"{left} = {temp_var}")
-                    else:
-                        self.intermediate_code.append(f"ERROR: Expresión inválida en: {line}")
+        for line in program_lines:
+            line = line.strip()
+
+            # Detectar declaración de variables
+            if "entero" in line or "decimal" in line:  # Detecta declaración de variables
+                var_declaration = re.match(r"(entero|decimal)\s+(\w+)\s*=\s*(.+);", line)
+                if var_declaration:
+                    var_type = var_declaration.group(1)  # 'entero' o 'decimal'
+                    var_name = var_declaration.group(2)  # Nombre de la variable
+                    var_value = var_declaration.group(3)  # Valor asignado a la variable
+
+                    # Generar código intermedio para la declaración de variables
+                    self.intermediate_code.append(f"{var_name} = {var_value}")
                 else:
-                    # Asignación simple
-                    self.intermediate_code.append(f"{left} = {right}")
+                    self.intermediate_code.append(f"ERROR: Declaración inválida en: {line}")
 
-            elif "si" in line or "sino" in line:
-                # Verificar que la condición esté presente
+            # Detectar la estructura del 'si'
+            elif "si" in line:  # Detecta la estructura del 'si'
                 condition_match = re.search(r"\((.*?)\)", line)
                 if condition_match:
                     condition = condition_match.group(1)
-                    temp_var = new_temp()
-                    self.intermediate_code.append(f"IF {condition} GOTO {temp_var}")
-                else:
-                    # Manejar el caso en que no haya condición
-                    self.intermediate_code.append(f"ERROR: Condición mal declarada en: {line}")
+                    label_true = self.new_label()
+                    label_false = self.new_label()
+                    label_end = self.new_label()
+
+                    # Generar código intermedio para la condición 'si'
+                    self.intermediate_code.append(f"IF {condition} GOTO {label_true}")
+                    self.intermediate_code.append(f"GOTO {label_false}")
+                    self.intermediate_code.append(f"{label_true}:")  # Etiqueta verdadera
+                    inside_if_block = True
+
+            elif "sino" in line:  # Detecta la estructura del 'sino'
+                if label_false is not None:
+                    # Antes de entrar al bloque 'sino', debemos saltar al final del bloque 'si'
+                    self.intermediate_code.append(f"GOTO {label_end}")
+                    self.intermediate_code.append(f"{label_false}:")  # Etiqueta falsa del 'si'
+                    inside_if_block = False
+                    inside_else_block = True
+
+            elif "{" in line or "}" in line:
+                # Ignorar las llaves
+                continue
+
+            elif "print" in line:  # Instrucción de impresión dentro del bloque 'si' o 'sino'
+                content = line.split('print')[1].strip().replace(";", "").replace("(", "").replace(")", "")
+                if inside_if_block:
+                    self.intermediate_code.append(f"CALL print({content})")  # Dentro del bloque 'si'
+                    inside_if_block = False  # Aquí aseguramos que se termine el bloque 'si'
+                    self.intermediate_code.append(f"GOTO {label_end}")  # Saltar al final después del 'si'
+                elif inside_else_block:
+                    self.intermediate_code.append(f"CALL print({content})")  # Dentro del bloque 'sino'
+                    inside_else_block = False  # Termina el bloque 'sino'
+
+        if label_end:
+            # Marcar el final del condicional
+            self.intermediate_code.append(f"{label_end}:")
 
         return "\n".join(self.intermediate_code)
