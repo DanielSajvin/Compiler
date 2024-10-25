@@ -21,6 +21,8 @@ class MainView(QMainWindow):
         # Interacciones con la interfaz
         self.openFile.clicked.connect(self.create)
 
+        self.btn_asm.clicked.connect(self.save_asm_file)
+
     # Seleccionar el archivo a compilar
     def create(self) -> None:
         # Obtener la dirección del archivo
@@ -99,5 +101,34 @@ class MainView(QMainWindow):
 
             # Finalmente, mostramos el código intermedio en el QTextEdit llamado label_inter
             self.label_inter.setText(intermediate_code)
+
+            # Convertir código intermedio a código máquina y mostrarlo en 'txt_maquina'
+            machine_code = compiled.convert_to_assembly(intermediate_code)
+            self.txt_maquina.setText(machine_code)
+
         except Exception as e:
             print(f"Error: {e}")  # Mostrar el error en la consola para diagnosticar
+
+    def save_asm_file(self):
+        # Obtener el código que ya está en txt_maquina
+        asm_code = self.txt_maquina.toPlainText()
+
+        if asm_code.strip() == "":
+            # Si no hay nada en el cuadro de texto de código máquina, mostrar un mensaje de error
+            self.show_error_message("No hay código máquina generado para guardar.")
+            return
+
+        # Abrir el cuadro de diálogo para guardar el archivo
+        file_name, _ = QFileDialog.getSaveFileName(self, 'Guardar archivo ASM', '', 'ASM Files (*.asm);;All Files (*)')
+
+        if file_name:  # Si el usuario seleccionó un nombre de archivo
+            try:
+                # Escribir el contenido del código en el archivo seleccionado
+                with open(file_name, 'w') as asm_file:
+                    asm_file.write(asm_code)
+                self.show_success_message(f"Archivo guardado exitosamente en {file_name}")
+            except Exception as e:
+                # Mostrar un mensaje de error si hay algún problema al escribir el archivo
+                self.show_error_message(f"Error al guardar el archivo: {str(e)}")
+
+

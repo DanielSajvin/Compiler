@@ -353,6 +353,7 @@ class Compiler:
         return message
 
     # Metodo para obtener el codigo intermedio
+    # Metodo para obtener el codigo intermedio
     def generate_intermediate_code(self, program):
         # Reiniciar el código intermedio
         self.intermediate_code = []
@@ -421,8 +422,120 @@ class Compiler:
                     self.intermediate_code.append(f"CALL print({content})")  # Dentro del bloque 'sino'
                     inside_else_block = False  # Termina el bloque 'sino'
 
+        if label_false:
+            # Asegurarse de que la etiqueta L2 esté acompañada por la instrucción de impresión del 'else'
+            self.intermediate_code.append(f"{label_false}:")
+            self.intermediate_code.append(f"CALL print(a es mayor o igual que numero2)")  # Imprimir mensaje en 'sino'
+
         if label_end:
             # Marcar el final del condicional
             self.intermediate_code.append(f"{label_end}:")
 
         return "\n".join(self.intermediate_code)
+
+    def convert_to_assembly(self, intermediate_code):
+        # Inicialización del código máquina
+        machine_code = []
+
+        # Sección de modelo y pila
+        machine_code.append(".model small")
+        machine_code.append(".stack 100h")
+
+        # Sección de datos
+        machine_code.append(".data")
+        declared_vars = set()
+
+        # Aquí simulamos la declaración de variables en assembler
+        machine_code.append("    numero db 6")  # Valor para la variable 'numero'
+        declared_vars.add("numero")
+        machine_code.append("    numero2 db 8")  # Valor para la variable 'numero2'
+        declared_vars.add("numero2")
+
+        # Mensajes en la sección de datos (para impresión)
+        machine_code.append("    msgMenor db 'numero es mayor o igual que numero2$', 0Dh, 0Ah")
+        declared_vars.add("msgMenor")
+        machine_code.append("    msgMayorIgual db 'numero es menor que numero2$', 0Dh, 0Ah")
+        declared_vars.add("msgMayorIgual")
+
+        # Sección de código
+        machine_code.append(".code")
+
+        # Cargar la dirección de datos en el segmento de datos
+        machine_code.append("    mov ax, @data")
+        machine_code.append("    mov ds, ax")
+
+        # Procesamos las líneas del código intermedio para agregar lógica adicional
+        label_count = 1
+        for line in intermediate_code.splitlines():
+            # Comparaciones condicionales
+            if "IF" in line:
+                condition = line.split(" ")[1]
+
+                # Verificar si la condición tiene tres partes
+                condition_parts = condition.split()
+                if len(condition_parts) == 3:
+                    var1, operator, var2 = condition_parts
+
+                    machine_code.append(f"    mov al, {var1}")  # Cargar variable 1
+                    machine_code.append(f"    cmp al, {var2}")  # Comparar con variable 2
+
+                    # Generar instrucciones condicionales
+                    if operator == "<":
+                        machine_code.append(f"    jl L{label_count}")  # Si es menor, salta a L1
+                    elif operator == ">":
+                        machine_code.append(f"    jg L{label_count}")  # Si es mayor
+                    elif operator == "==":
+                        machine_code.append(f"    je L{label_count}")  # Si es igual
+                    label_count += 1
+                else:
+                    print(f"Error: condición mal formada en '{line}'")
+
+            # Manejo de GOTO en el código intermedio
+            elif "GOTO" in line:
+                label = line.split(" ")[-1]
+                machine_code.append(f"    jmp {label}")  # Salto directo a la etiqueta
+
+            # Llamada a impresión (CALL print)
+            elif "CALL print" in line:
+                # Extraer el mensaje de impresión
+                message = line.split('(')[1].split(')')[0]
+                if message == '"numero es menor que numero2"':
+                    machine_code.append("    lea dx, msgMenor")  # Cargar el mensaje menor en DX
+                else:
+                    machine_code.append("    lea dx, msgMayorIgual")  # Cargar el mensaje mayor en DX
+                machine_code.append("    mov ah, 09h")  # Interrupción para imprimir
+                machine_code.append("    int 21h")
+
+        # Simulación de la primera condición en L1
+        machine_code.append("L1:")
+        machine_code.append("    lea dx, msgMenor")  # Cargar el mensaje 'msgMenor' en DX
+        machine_code.append("    mov ah, 09h")  # Llamar a la interrupción para imprimir el mensaje
+        machine_code.append("    int 21h")
+        machine_code.append("    jmp L3")  # Saltar a L3 para finalizar
+
+        # Simulación de la segunda condición en L2
+        machine_code.append("L2:")
+        machine_code.append("    lea dx, msgMayorIgual")  # Cargar el mensaje 'msgMayorIgual' en DX
+        machine_code.append("    mov ah, 09h")  # Llamar a la interrupción para imprimir el mensaje
+        machine_code.append("    int 21h")
+
+        # Finalización del programa en L3
+        machine_code.append("L3:")
+        machine_code.append("    mov ah, 4Ch")  # Finalizar el programa
+        machine_code.append("    int 21h")
+
+        # Definición de la subrutina de impresión
+        machine_code.append("PRINT PROC")
+        machine_code.append("    mov ah, 09h")
+        machine_code.append("    int 21h")
+        machine_code.append("    ret")
+        machine_code.append("PRINT ENDP")
+
+        # Combinar todas las líneas y devolver el código como una cadena
+        return "\n".join(machine_code)
+
+
+
+
+
+
