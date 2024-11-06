@@ -23,6 +23,10 @@ class MainView(QMainWindow):
 
         self.btn_asm.clicked.connect(self.save_asm_file)
 
+
+        self.btn_generate_exe.clicked.connect(self.generate_exe)  # Nuevo botón para generar .exe y .obj
+
+
     # Seleccionar el archivo a compilar
     def create(self) -> None:
         # Obtener la dirección del archivo
@@ -130,5 +134,26 @@ class MainView(QMainWindow):
             except Exception as e:
                 # Mostrar un mensaje de error si hay algún problema al escribir el archivo
                 self.show_error_message(f"Error al guardar el archivo: {str(e)}")
+
+    def generate_exe(self):
+        asm_file_path = QFileDialog.getOpenFileName(self, 'Select ASM File', '', 'Assembly Files (*.asm)')[0]
+        if asm_file_path:
+            obj_file = asm_file_path.replace('.asm', '.obj')
+            exe_file = asm_file_path.replace('.asm', '.exe')
+
+            try:
+                # Compilar el archivo .asm a .obj
+                subprocess.run(['ml', '/c', '/Fo' + obj_file, asm_file_path], check=True)  # ml es MASM en Windows
+
+                # Enlazar el archivo .obj a .exe
+                subprocess.run(['link', '/OUT:' + exe_file, obj_file], check=True)
+
+                QMessageBox.information(self, "EXE Generated", f"Archivo .exe generado en {exe_file}")
+
+            except subprocess.CalledProcessError as e:
+                QMessageBox.critical(self, "Error", f"Error al generar .exe: {e}")
+            except FileNotFoundError:
+                QMessageBox.critical(self, "Error",
+                                     "MASM o LINK no encontrados. Asegúrate de que están instalados y en el PATH.")
 
 
